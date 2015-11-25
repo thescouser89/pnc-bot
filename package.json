@@ -1,0 +1,25 @@
+{
+  "name": "dbot",
+  "version": "0.0.0",
+  "private": true,
+  "author": "Dustin Kut Moy Cheung <dcheung@redhat.com>",
+  "description": "P = NP",
+  "dependencies": {
+    "hubot-help": "~0.1.2",
+    "hubot-shipit": "~0.2.0",
+    "hubot-pugme": "~0.1.0",
+    "hubot-rules": "~0.1.1",
+    "hubot-maps": "0.0.2",
+    "hubot-google-translate": "~0.2.0",
+    "hubot-google-images": "~0.2.4",
+    "hubot-heroku-keepalive": "~1.0.0",
+    "hubot-diagnostics": "0.0.1",
+    "hubot-redis-brain": "0.0.3",
+    "hubot-scripts": "~2.16.2",
+    "hubot": "~2.17.0",
+    "hubot-irc": "~0.2.8"
+  },
+  "engines": {
+    "node": "0.10.x"
+  }
+}
