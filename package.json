@@ -1,5 +1,5 @@
 {
-  "name": "dbot",
+  "name": "pnc-bot",
   "version": "0.0.0",
   "private": true,
   "author": "Dustin Kut Moy Cheung <dcheung@redhat.com>",
@@ -17,7 +17,11 @@
     "hubot-redis-brain": "0.0.3",
     "hubot-scripts": "~2.16.2",
     "hubot": "~2.17.0",
-    "hubot-irc": "~0.2.8"
+    "hubot-irc": "~0.2.8",
+    "restler": "~3.4.0",
+    "elapsed": "~0.0.5",
+    "irc-colors": "~1.2.0",
+    "jsonfile": "~2.2.3"
   },
   "engines": {
     "node": "0.10.x"

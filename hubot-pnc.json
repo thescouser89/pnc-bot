@@ -1,0 +1,7 @@
+{
+  "pnc_servers": [
+  ],
+  "aprox_servers": [
+  ],
+  "pnc_main_server": "localhost:8080"
+}
