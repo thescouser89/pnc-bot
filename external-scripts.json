@@ -8,5 +8,11 @@
   "hubot-maps",
   "hubot-redis-brain",
   "hubot-rules",
-  "hubot-shipit"
+  "hubot-shipit",
+  "hubot-url-title",
+  "hubot-cheers",
+  "hubot-cheer",
+  "hubot-praise",
+  "hubot-huehuehue",
+  "hubot-sentiment"
 ]
