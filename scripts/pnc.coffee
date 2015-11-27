@@ -63,7 +63,7 @@ module.exports = (robot) ->
     elapsed_submit_time = new Elapsed(submit_date, new Date())
 
     Rest.get(build_configuration + bc_id).on('complete', (result) ->
-      res.send "#{result.content.name.irc.brown()}\##{running_build_id.irc.blue()}" +
+      res.send "#{result.content.name.irc.brown()}\##{running_build_id}" +
       " (submitted #{elapsed_submit_time.optimal.irc.white()} ago)"
     )
 
