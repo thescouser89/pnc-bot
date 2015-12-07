@@ -11,5 +11,6 @@
     "username": "",
     "password": ""
   }
-  "pnc_main_server": "localhost:8080"
+  "pnc_main_server": "localhost:8080",
+  "pnc_monitoring_channel": "#dcheung-test"
 }

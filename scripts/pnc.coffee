@@ -33,6 +33,9 @@ JSON_File = require("jsonfile")
 # this will make string be able to be formatted with IRC color
 require("irc-colors").global()
 
+# Cronjob
+CronJob = require('cron').CronJob
+
 
 config = ''
 
@@ -117,6 +120,92 @@ module.exports = (robot) ->
   # ============================================================================
 
   # ----------------------------------------------------------------------------
+
+  # ============================================================================
+  # Beginning of CronJob definition for monitoring
+  # ============================================================================
+
+  # server_status = {
+  #   "server_name": "online",
+  #   "server_name2": "offline"
+  # }
+  server_status = {}
+  irc_status = (status) ->
+    switch status
+      when "Online" then status.irc.green.bold()
+      when "Online, but throwing errors" then status.irc.yellow.bold.bgblack()
+      when "OFFLINE" then status.irc.red.bold.bgwhite()
+
+  message_channel = (server_url, status, old_status) ->
+
+    opening_msg = ">>>".irc.bold.red()
+    closing_msg = "<<<".irc.bold.red()
+    message = "#{opening_msg} #{server_url} is now #{irc_status(status)}" +
+              " (was previously #{irc_status(old_status)}) #{closing_msg}"
+
+    robot.messageRoom config.pnc_monitoring_channel, message
+
+  update_status = (server_url, status) ->
+    if server_status[server_url]
+      if server_status[server_url] != status
+        robot.logger.info "#{server_url} is #{status}"
+        message_channel server_url, status, server_status[server_url]
+        server_status[server_url] = status
+    else
+      # first time the server is encountered, don't notify
+      robot.logger.info "#{server_url} is #{status}"
+      server_status[server_url] = status
+
+  # TODO: rename those functions to something better later. it's getting confusing
+  check_keycloak_server = (keycloak_server) ->
+
+    request =
+      data:
+        grant_type: 'password'
+        client_id: config.keycloak_config.client_id
+        username: config.keycloak_config.username
+        password: config.keycloak_config.password
+
+    first_str = "Keycloak".irc.grey() + ": #{keycloak_server} :: "
+    realm = config.keycloak_config.realm
+
+    Rest.post("#{keycloak_server}/auth/realms/#{realm}/tokens/grants/access", request).on('success', (result) ->
+      status = "Online"
+      update_status(keycloak_server, status)
+    ).on('fail', (result) ->
+      status = "Online, but throwing errors"
+      update_status(keycloak_server, status)
+    ).on('error', (result) ->
+      status = "OFFLINE"
+      update_status(keycloak_server, status)
+    )
+
+  check_status_server = (server_url, server_url_test) ->
+
+    status = ""
+    Rest.get(server_url_test).on('success', (result) ->
+      status = "Online"
+      update_status(server_url, status)
+    ).on('fail', (result) ->
+      status = "Online, but throwing errors"
+      update_status(server_url, status)
+    ).on('error', (result) ->
+      status = "OFFLINE"
+      update_status(server_url, status)
+    )
+
+  check_status = () ->
+    check_status_server(server, server + test_pnc_online_url) for server in pnc_servers
+    check_status_server(server, server + test_aprox_online_url) for server in aprox_servers
+    check_keycloak_server(server) for server in keycloak_servers
+
+  new CronJob("0 */5 * * * *", check_status, null, true)
+  # ============================================================================
+  # End of Cronjob definition for monitoring
+  # ============================================================================
+
+  # ----------------------------------------------------------------------------
+
 
   # ============================================================================
   # Running builds command
