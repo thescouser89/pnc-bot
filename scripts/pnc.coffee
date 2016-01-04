@@ -44,6 +44,7 @@ build_configuration = ''
 pnc_servers = []
 aprox_servers = []
 keycloak_servers = []
+repour_servers = []
 
 JSON_File.readFile(config_file, (err, obj) ->
   config = obj
@@ -53,6 +54,7 @@ JSON_File.readFile(config_file, (err, obj) ->
   pnc_servers = config.pnc_servers
   aprox_servers = config.aprox_servers
   keycloak_servers = config.keycloak_servers
+  repour_servers = config.repour_servers
 )
 
 # ==============================================================================
@@ -105,7 +107,7 @@ module.exports = (robot) ->
         username: config.keycloak_config.username
         password: config.keycloak_config.password
 
-    first_str = "Keycloak".irc.grey() + ": #{keycloak_server} :: "
+    first_str = "Keycloak".irc.grey() + ":: #{keycloak_server} : "
     realm = config.keycloak_config.realm
 
     Rest.post("#{keycloak_server}/auth/realms/#{realm}/tokens/grants/access", request).on('success', (result) ->
@@ -115,6 +117,18 @@ module.exports = (robot) ->
       ).on('error', (result) ->
         res.send first_str + "OFFLINE".irc.red.bold.bgwhite()
       )
+
+  # weirdly, we check if the repour server is online by seeing if it returns
+  # 404. If not, then it's most probably down
+  check_if_repour_server_online = (server_name, res) ->
+
+    first_str = "Repour".grey() + " :: #{server_name} : "
+
+    Rest.get(server_name).on('404', (result) ->
+      res.send first_str + "Online".irc.green.bold()
+    ).on('error', (result) ->
+      res.send first_str + "OFFLINE".irc.red.bold.bgwhite()
+    )
   # ============================================================================
   # End of helper methods
   # ============================================================================
@@ -180,6 +194,17 @@ module.exports = (robot) ->
       update_status(keycloak_server, status)
     )
 
+  check_repour_server = (repour_server) ->
+    status = ""
+    Rest.get(repour_server).on('404', (result) ->
+      status = "Online"
+      update_status(repour_server, status)
+    ).on('error', (result) ->
+      status = "OFFLINE"
+      update_status(repour_server, status)
+    )
+
+
   check_status_server = (server_url, server_url_test) ->
 
     status = ""
@@ -198,6 +223,7 @@ module.exports = (robot) ->
     check_status_server(server, server + test_pnc_online_url) for server in pnc_servers
     check_status_server(server, server + test_aprox_online_url) for server in aprox_servers
     check_keycloak_server(server) for server in keycloak_servers
+    check_repour_server(server) for server in repour_servers
 
   new CronJob("0 */5 * * * *", check_status, null, true)
   # ============================================================================
@@ -229,3 +255,4 @@ module.exports = (robot) ->
     check_if_pnc_server_online pnc_server, res for pnc_server in pnc_servers
     check_if_aprox_server_online aprox_server, res for aprox_server in aprox_servers
     check_if_keycloak_server_online keycloak_server, res for keycloak_server in keycloak_servers
+    check_if_repour_server_online repour_server, res for repour_server in repour_servers

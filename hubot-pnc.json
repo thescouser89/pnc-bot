@@ -5,12 +5,14 @@
   ],
   "keycloak_servers": [
   ],
+  "repour_servers": [
+  ],
   "keycloak_config": {
     "client_id": "",
     "realm": "",
     "username": "",
     "password": ""
-  }
+  },
   "pnc_main_server": "localhost:8080",
   "pnc_monitoring_channel": "#dcheung-test"
 }
