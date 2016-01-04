@@ -122,7 +122,7 @@ module.exports = (robot) ->
   # 404. If not, then it's most probably down
   check_if_repour_server_online = (server_name, res) ->
 
-    first_str = "Repour".grey() + " :: #{server_name} : "
+    first_str = "Repour".irc.grey() + " :: #{server_name} : "
 
     Rest.get(server_name).on('404', (result) ->
       res.send first_str + "Online".irc.green.bold()
