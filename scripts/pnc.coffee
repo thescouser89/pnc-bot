@@ -43,6 +43,7 @@ running_builds_url = ''
 build_configuration = ''
 pnc_servers = []
 aprox_servers = []
+jenkins_servers = []
 keycloak_servers = []
 repour_servers = []
 
@@ -53,6 +54,7 @@ JSON_File.readFile(config_file, (err, obj) ->
 
   pnc_servers = config.pnc_servers
   aprox_servers = config.aprox_servers
+  jenkins_servers = config.jenkins_servers
   keycloak_servers = config.keycloak_servers
   repour_servers = config.repour_servers
 )
@@ -96,6 +98,9 @@ module.exports = (robot) ->
   check_if_aprox_server_online = (aprox_server, res) ->
     check_if_server_online(aprox_server + test_aprox_online_url,
                            aprox_server, "Aprox", res)
+
+  check_if_jenkins_server_online = (jenkins_server, res) ->
+    check_if_server_online(jenkins_server, jenkins_server, "JENKINS", res)
 
   # gonna do it custom for keycloak cause it's weird
   check_if_keycloak_server_online = (keycloak_server, res) ->
@@ -222,6 +227,7 @@ module.exports = (robot) ->
   check_status = () ->
     check_status_server(server, server + test_pnc_online_url) for server in pnc_servers
     check_status_server(server, server + test_aprox_online_url) for server in aprox_servers
+    check_status_server(server, server) for server in jenkins_servers
     check_keycloak_server(server) for server in keycloak_servers
     check_repour_server(server) for server in repour_servers
 
@@ -254,5 +260,6 @@ module.exports = (robot) ->
   robot.respond /(.*)pnc(.*)status(.*)/i, (res) ->
     check_if_pnc_server_online pnc_server, res for pnc_server in pnc_servers
     check_if_aprox_server_online aprox_server, res for aprox_server in aprox_servers
+    check_if_jenkins_server_online jenkins_server, res for jenkins_server in jenkins_servers
     check_if_keycloak_server_online keycloak_server, res for keycloak_server in keycloak_servers
     check_if_repour_server_online repour_server, res for repour_server in repour_servers
