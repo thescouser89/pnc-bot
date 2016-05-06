@@ -1,4 +1,4 @@
-################################################################################
+# ******************************************************************************
 # pnc irc extension for hubot
 #
 # Current commands implemented:
@@ -11,16 +11,11 @@
 #
 # Author: dcheung
 #
-################################################################################
+# ******************************************************************************
 
-# Disable SSL check
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
-
-config_file = "hubot-pnc.json"
-test_pnc_online_url = "/pnc-rest/rest/users"
-test_aprox_online_url = "/api/remote/central/xom/xom"
-
-
+# ==============================================================================
+# Begin: Import statements
+# ==============================================================================
 # Used to check if server is online
 Rest = require("restler")
 
@@ -35,27 +30,49 @@ require("irc-colors").global()
 
 # Cronjob
 CronJob = require('cron').CronJob
+# ==============================================================================
+# End: Import statements
+# ==============================================================================
 
+# ==============================================================================
+# Begin: Global variables
+# ==============================================================================
+
+# Disable SSL check
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
+status_online = "Online"
+status_online_errors = "Online, but throwing errors"
+status_offline = "OFFLINE"
+
+config_file = "hubot-pnc.json"
+test_pnc_online_url = "/pnc-rest/rest/users"
+test_indy_online_url = "/api/remote/central/xom/xom"
+test_da_online_url = "/da/rest/v-0.4"
 
 config = ''
 
-running_builds_url = ''
-build_configuration = ''
 pnc_servers = []
-aprox_servers = []
+indy_servers = []
 jenkins_servers = []
 keycloak_servers = []
+dependency_analysis_servers = []
 repour_servers = []
+# ==============================================================================
+# End: Global variables
+# ==============================================================================
 
+# ==============================================================================
+# Parse the configuration file and set initial values for hte global variables
+# ==============================================================================
 JSON_File.readFile(config_file, (err, obj) ->
   config = obj
-  running_builds_url = "#{config.pnc_main_server}/pnc-rest/rest/running-build-records"
-  build_configuration = "#{config.pnc_main_server}/pnc-rest/rest/build-configurations/"
 
   pnc_servers = config.pnc_servers
-  aprox_servers = config.aprox_servers
+  indy_servers = config.indy_servers
   jenkins_servers = config.jenkins_servers
   keycloak_servers = config.keycloak_servers
+  dependency_analysis_servers = config.dependency_analysis_servers
   repour_servers = config.repour_servers
 )
 
@@ -64,46 +81,47 @@ JSON_File.readFile(config_file, (err, obj) ->
 # ==============================================================================
 module.exports = (robot) ->
 
+  # Keep the current state of the servers
+  # server_status = {
+  #   "server_name": "online",
+  #   "server_name2": "offline"
+  # }
+  server_status = {}
+
   # ============================================================================
-  # Beginning of helper methods
+  # Colorize the string based on the status
   # ============================================================================
-  send_build_configuration_name = (running_build, res) ->
-    bc_id = running_build.buildConfigurationId
-    running_build_id = running_build.id
+  irc_colorize_status = (status) ->
+    switch status
+      when status_online then status.irc.green.bold()
+      when status_online_errors then status.irc.yellow.bold.bgblack()
+      when status_offline then status.irc.red.bold.bgwhite()
 
-    submit_date = new Date(running_build.submitTime)
-    elapsed_submit_time = new Elapsed(submit_date, new Date())
+  # ============================================================================
+  # Print to the channel that a server has changed status
+  #
+  # Parameters:
+  #   server_url: :string:
+  #   new_status: :string:
+  #   old_status: :string:
+  # ============================================================================
+  notify_status_change = (server_url, new_status, old_status) ->
 
-    Rest.get(build_configuration + bc_id).on('complete', (result) ->
-      res.send "#{result.content.name.irc.brown()}\##{running_build_id}" +
-      " (submitted #{elapsed_submit_time.optimal.irc.white()} ago)"
-    )
+    opening_msg = ">>>".irc.bold.red()
+    closing_msg = "<<<".irc.bold.red()
+    message = "#{opening_msg} #{server_url} is now #{irc_colorize_status(new_status)}" +
+              " (was previously #{irc_colorize_status(old_status)}) #{closing_msg}"
 
-  check_if_server_online = (url, server_name, server_type, res) ->
+    robot.messageRoom config.pnc_monitoring_channel, message
 
-    first_str = "#{server_type.irc.grey()} :: #{server_name} : "
-
-    Rest.get(url).on('success', (result) ->
-      res.send first_str + "Online".irc.green.bold()
-    ).on('fail', (result) ->
-      res.send first_str + "Online, but throwing errors".irc.yellow.bold.bgblack()
-    ).on('error', (result) ->
-      res.send first_str + "OFFLINE".irc.red.bold.bgwhite()
-    )
-
-  check_if_pnc_server_online = (pnc_server, res) ->
-    check_if_server_online(pnc_server + test_pnc_online_url,
-                           pnc_server, "PNC", res)
-
-  check_if_aprox_server_online = (aprox_server, res) ->
-    check_if_server_online(aprox_server + test_aprox_online_url,
-                           aprox_server, "Aprox", res)
-
-  check_if_jenkins_server_online = (jenkins_server, res) ->
-    check_if_server_online(jenkins_server, jenkins_server, "JENKINS", res)
-
-  # gonna do it custom for keycloak cause it's weird
-  check_if_keycloak_server_online = (keycloak_server, res) ->
+  # ============================================================================
+  # Check if the Keycloak server is online
+  #
+  # Parameters:
+  #   keycloak url: :string:
+  #   handler: function accepting 2 parameters, first one is server url, second one is status
+  # ============================================================================
+  check_keycloak_server = (keycloak_url, handler, retries = 2) ->
 
     request =
       data:
@@ -112,154 +130,113 @@ module.exports = (robot) ->
         username: config.keycloak_config.username
         password: config.keycloak_config.password
 
-    first_str = "Keycloak".irc.grey() + ":: #{keycloak_server} : "
     realm = config.keycloak_config.realm
 
-    Rest.post("#{keycloak_server}/auth/realms/#{realm}/tokens/grants/access", request).on('success', (result) ->
-        res.send first_str + "Online".irc.green.bold()
-      ).on('fail', (result) ->
-        res.send first_str + "Online, but throwing errors".irc.yellow.bold.bgblack()
-      ).on('error', (result) ->
-        res.send first_str + "OFFLINE".irc.red.bold.bgwhite()
-      )
-
-  # weirdly, we check if the repour server is online by seeing if it returns
-  # 404. If not, then it's most probably down
-  check_if_repour_server_online = (server_name, res) ->
-
-    first_str = "Repour".irc.grey() + " :: #{server_name} : "
-
-    Rest.get(server_name).on('404', (result) ->
-      res.send first_str + "Online".irc.green.bold()
+    Rest.post("#{keycloak_url}/auth/realms/#{realm}/tokens/grants/access", request).on('success', (result) ->
+      handler keycloak_url, status_online
+    ).on('fail', (result) ->
+      handler keycloak_url, status_online_errors if retries == 0
+      check_keycloak_server(keycloak_url, handler, retries - 1) if retries != 0
     ).on('error', (result) ->
-      res.send first_str + "OFFLINE".irc.red.bold.bgwhite()
+      handler keycloak_url, status_offline if retries == 0
+      check_keycloak_server(keycloak_url, handler, retries - 1) if retries != 0
     )
-  # ============================================================================
-  # End of helper methods
-  # ============================================================================
-
-  # ----------------------------------------------------------------------------
 
   # ============================================================================
-  # Beginning of CronJob definition for monitoring
+  # Check if the Repour server is online
+  #
+  # Parameters:
+  #   repour url: :string:
+  #   handler: function accepting 2 parameters, first one is server url, second one is status
   # ============================================================================
+  check_repour_server = (repour_url, handler, retries = 2) ->
+    Rest.get(repour_url).on('404', (result) ->
+      handler repour_url, status_online
+    ).on('error', (result) ->
+      handler repour_url, status_offline if retries == 0
+      check_repour_server(repour_url, handler, retries - 1) if retries != 0
+    )
 
-  # server_status = {
-  #   "server_name": "online",
-  #   "server_name2": "offline"
-  # }
-  server_status = {}
-  irc_status = (status) ->
-    switch status
-      when "Online" then status.irc.green.bold()
-      when "Online, but throwing errors" then status.irc.yellow.bold.bgblack()
-      when "OFFLINE" then status.irc.red.bold.bgwhite()
+  # ============================================================================
+  # General check for status of server
+  #
+  # This is the generic implementation to see if a server is online or not
+  # Does a GET on server_url_test (note: expects full URL)
+  #
+  # Parameters:
+  #   server url: :string:
+  #   handler: :function: function accepting 2 parameters, first one is server url, second one is status
+  # ============================================================================
+  check_status_server = (server_url, server_url_test, handler, retries = 2) ->
 
-  message_channel = (server_url, status, old_status) ->
+    Rest.get(server_url_test).on('success', (result) ->
+      handler server_url, status_online
+    ).on('fail', (result) ->
+      handler server_url, status_online_errors if retries == 0
+      check_status_server(server_url, server_url_test, handler, retries - 1) if retries != 0
+    ).on('error', (result) ->
+      handler server_url, status_offline if retries == 0
+      check_status_server(server_url, server_url_test, handler, retries - 1) if retries != 0
+    )
 
-    opening_msg = ">>>".irc.bold.red()
-    closing_msg = "<<<".irc.bold.red()
-    message = "#{opening_msg} #{server_url} is now #{irc_status(status)}" +
-              " (was previously #{irc_status(old_status)}) #{closing_msg}"
-
-    robot.messageRoom config.pnc_monitoring_channel, message
-
+  # ============================================================================
+  # Handler for the check_* functions
+  #
+  # Update the current status of the channel, and notify to the channel
+  # if the status has changed
+  #
+  # Parameters:
+  #   server_url: :string:
+  #   status    : :string: current status of the server
+  # ============================================================================
   update_status = (server_url, status) ->
     if server_status[server_url]
       if server_status[server_url] != status
         robot.logger.info "#{server_url} is #{status}"
-        message_channel server_url, status, server_status[server_url]
+        notify_status_change server_url, status, server_status[server_url]
         server_status[server_url] = status
     else
       # first time the server is encountered, don't notify
       robot.logger.info "#{server_url} is #{status}"
       server_status[server_url] = status
 
-  # TODO: rename those functions to something better later. it's getting confusing
-  check_keycloak_server = (keycloak_server) ->
-
-    request =
-      data:
-        grant_type: 'password'
-        client_id: config.keycloak_config.client_id
-        username: config.keycloak_config.username
-        password: config.keycloak_config.password
-
-    first_str = "Keycloak".irc.grey() + ": #{keycloak_server} :: "
-    realm = config.keycloak_config.realm
-
-    Rest.post("#{keycloak_server}/auth/realms/#{realm}/tokens/grants/access", request).on('success', (result) ->
-      status = "Online"
-      update_status(keycloak_server, status)
-    ).on('fail', (result) ->
-      status = "Online, but throwing errors"
-      update_status(keycloak_server, status)
-    ).on('error', (result) ->
-      status = "OFFLINE"
-      update_status(keycloak_server, status)
-    )
-
-  check_repour_server = (repour_server) ->
-    status = ""
-    Rest.get(repour_server).on('404', (result) ->
-      status = "Online"
-      update_status(repour_server, status)
-    ).on('error', (result) ->
-      status = "OFFLINE"
-      update_status(repour_server, status)
-    )
-
-
-  check_status_server = (server_url, server_url_test) ->
-
-    status = ""
-    Rest.get(server_url_test).on('success', (result) ->
-      status = "Online"
-      update_status(server_url, status)
-    ).on('fail', (result) ->
-      status = "Online, but throwing errors"
-      update_status(server_url, status)
-    ).on('error', (result) ->
-      status = "OFFLINE"
-      update_status(server_url, status)
-    )
-
-  check_status = () ->
-    check_status_server(server, server + test_pnc_online_url) for server in pnc_servers
-    check_status_server(server, server + test_aprox_online_url) for server in aprox_servers
-    check_status_server(server, server) for server in jenkins_servers
-    check_keycloak_server(server) for server in keycloak_servers
-    check_repour_server(server) for server in repour_servers
-
-  new CronJob("0 */5 * * * *", check_status, null, true)
   # ============================================================================
-  # End of Cronjob definition for monitoring
+  # Function generating a handler for the check_* functions
+  #
+  # Immediately notify the user of the current status of the server. This
+  # function returns a new function that will act as the handler for the check_*
+  # functions
+  #
+  # Parameters:
+  #   server_type: :string: type of the server
+  #   res        : IRC object to return the final string to the sender
   # ============================================================================
-
-  # ----------------------------------------------------------------------------
-
+  reply_now = (server_type, res) ->
+      (server_url, status) ->
+        status_colorized = irc_colorize_status(status)
+        res.send "#{server_type.irc.grey()} :: #{server_url} : #{status_colorized}"
 
   # ============================================================================
-  # Running builds command
+  # *==* Update this function if you want to add a new server monitoring! *==*
+  # Function invoked in the cron job
   # ============================================================================
-  robot.respond /(.*)running builds(.*)/i, (res) ->
-    Rest.get(running_builds_url).on('success', (result) ->
-      if result && result.content && result.content.length > 0
-        send_build_configuration_name running_build, res for running_build in result.content
-      else
-        res.reply "No running builds on #{config.pnc_main_server.irc.gray()}"
-    ).on('fail', (result) ->
-      res.reply "#{config.pnc_main_server.irc.gray()} is throwing errors"
-    ).on('error', (result) ->
-      res.reply "#{config.pnc_main_server.irc.gray()} is " + "OFFLINE".irc.red.bold.bgwhite()
-    )
+  cron_check_status = () ->
+    check_status_server(server, server + test_pnc_online_url, update_status) for server in pnc_servers
+    check_status_server(server, server + test_indy_online_url, update_status) for server in indy_servers
+    check_status_server(server, server + test_da_online_url, update_status) for server in dependency_analysis_servers
+    check_status_server(server, server, update_status) for server in jenkins_servers
+    check_keycloak_server(server, update_status) for server in keycloak_servers
+    check_repour_server(server, update_status) for server in repour_servers
+
+  new CronJob("0 */5 * * * *", cron_check_status, null, true)
 
   # ============================================================================
   # pnc status command
   # ============================================================================
   robot.respond /(.*)pnc(.*)status(.*)/i, (res) ->
-    check_if_pnc_server_online pnc_server, res for pnc_server in pnc_servers
-    check_if_aprox_server_online aprox_server, res for aprox_server in aprox_servers
-    check_if_jenkins_server_online jenkins_server, res for jenkins_server in jenkins_servers
-    check_if_keycloak_server_online keycloak_server, res for keycloak_server in keycloak_servers
-    check_if_repour_server_online repour_server, res for repour_server in repour_servers
+    check_status_server(server, server + test_pnc_online_url, reply_now("PNC", res)) for server in pnc_servers
+    check_status_server(server, server + test_indy_online_url, reply_now("Indy", res)) for server in indy_servers
+    check_status_server(server, server + test_da_online_url, reply_now("DA", res)) for server in dependency_analysis_servers
+    check_status_server(server, server, reply_now("Jenkins", res)) for server in jenkins_servers
+    check_keycloak_server(server, reply_now("Keycloak", res)) for server in keycloak_servers
+    check_repour_server(server, reply_now("Repour", res)) for server in repour_servers

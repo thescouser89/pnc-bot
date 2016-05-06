@@ -1,7 +1,7 @@
 {
   "pnc_servers": [
   ],
-  "aprox_servers": [
+  "indy_servers": [
   ],
   "keycloak_servers": [
   ],
@@ -9,12 +9,13 @@
   ],
   "jenkins_servers": [
   ],
+  "dependency_analysis_servers": [
+  ],
   "keycloak_config": {
-    "client_id": "",
-    "realm": "",
-    "username": "",
-    "password": ""
+  	"client_id": "",
+  	"realm": "",
+  	"username": "",
+  	"password": ""
   },
-  "pnc_main_server": "localhost:8080",
-  "pnc_monitoring_channel": "#dcheung-test"
+  "pnc_monitoring_channel": ""
 }
