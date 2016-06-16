@@ -152,7 +152,7 @@ module.exports = (robot) ->
   check_repour_server = (repour_url, handler, retries = 2) ->
     Rest.get(repour_url).on('404', (result) ->
       handler repour_url, status_online
-    ).on('fail', (result) ->
+    ).on('503', (result) ->
       handler repour_url, status_online_errors if retries == 0
       check_repour_server(repour_url, handler, retries - 1) if retries != 0
     ).on('error', (result) ->
