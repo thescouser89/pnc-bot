@@ -220,6 +220,18 @@ module.exports = (robot) ->
         res.send "#{server_type.irc.grey()} :: #{server_url} : #{status_colorized}"
 
   # ============================================================================
+  # Simple cronjob to remind people it's scrum-time!
+  # ============================================================================
+  crontime = () ->
+    banner  = "-+=+|*#_--=--_#*|+=+-".irc.rainbow()
+    message = " IT'S SCRUM TIME !!!".irc.rainbow.bold()
+    robot.messageRoom config.pnc_monitoring_channel, banner
+    robot.messageRoom config.pnc_monitoring_channel, message
+    robot.messageRoom config.pnc_monitoring_channel, banner
+
+
+  new CronJob("0 43-45 9 * * 1-4", crontime, null, true)
+  # ============================================================================
   # *==* Update this function if you want to add a new server monitoring! *==*
   # Function invoked in the cron job
   # ============================================================================
