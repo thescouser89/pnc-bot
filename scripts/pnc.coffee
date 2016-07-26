@@ -223,7 +223,7 @@ module.exports = (robot) ->
   # Simple cronjob to remind people it's scrum-time!
   # ============================================================================
   crontime = () ->
-    message = " IT'S SCRUM TIME !!!".repeat(3).irc.rainbow.bold()
+    message = " IT'S SCRUM TIME !!! IT'S SCRUM TIME !!! IT'S SCRUM TIME !!!".irc.rainbow.bold()
     robot.messageRoom config.pnc_monitoring_channel, message
 
 
