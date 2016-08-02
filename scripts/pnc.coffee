@@ -132,7 +132,7 @@ module.exports = (robot) ->
 
     realm = config.keycloak_config.realm
 
-    Rest.post("#{keycloak_url}/auth/realms/#{realm}/tokens/grants/access", request).on('success', (result) ->
+    Rest.post("#{keycloak_url}/auth/realms/#{realm}/protocol/openid-connect/token", request).on('success', (result) ->
       handler keycloak_url, status_online
     ).on('fail', (result) ->
       handler keycloak_url, status_online_errors if retries == 0
