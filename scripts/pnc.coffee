@@ -58,6 +58,7 @@ jenkins_servers = []
 keycloak_servers = []
 dependency_analysis_servers = []
 repour_servers = []
+scrum_users = []
 # ==============================================================================
 # End: Global variables
 # ==============================================================================
@@ -74,6 +75,7 @@ JSON_File.readFile(config_file, (err, obj) ->
   keycloak_servers = config.keycloak_servers
   dependency_analysis_servers = config.dependency_analysis_servers
   repour_servers = config.repour_servers
+  scrum_users = config.scrum_users
 )
 
 # ==============================================================================
@@ -223,8 +225,9 @@ module.exports = (robot) ->
   # Simple cronjob to remind people it's scrum-time!
   # ============================================================================
   crontime = () ->
-    message = " IT'S SCRUM TIME !!! IT'S SCRUM TIME !!! IT'S SCRUM TIME !!!".irc.rainbow.bold()
-    robot.messageRoom config.pnc_monitoring_channel, message
+    users_str = config.scrum_users.join(' ')
+    message = "IT'S SCRUM TIME !!! IT'S SCRUM TIME !!! IT'S SCRUM TIME !!!".irc.rainbow.bold()
+    robot.messageRoom config.pnc_monitoring_channel, users_str + ": " + message
 
 
   new CronJob("0 43-44 9 * * 1-4", crontime, null, true)
@@ -252,3 +255,16 @@ module.exports = (robot) ->
     check_status_server(server, server, reply_now("Jenkins", res)) for server in jenkins_servers
     check_keycloak_server(server, reply_now("Keycloak", res)) for server in keycloak_servers
     check_repour_server(server, reply_now("Repour", res)) for server in repour_servers
+
+
+  robot.hear /^all[:,]+(.*)/i, (res) ->
+    response = ''
+
+    # build user list
+    for own key, user of robot.brain.data.users
+      # don't include the bot nick in all
+      response += "#{user.name} " if user.room == res.envelope.room and user.name != robot.name
+
+    response = response.trim() + ": " + res.match[1].trim() if response
+
+    res.send response if response

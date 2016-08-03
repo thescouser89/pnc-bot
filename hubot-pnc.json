@@ -17,5 +17,7 @@
   	"username": "",
   	"password": ""
   },
-  "pnc_monitoring_channel": ""
+  "pnc_monitoring_channel": "",
+  "scrum_users": [
+  ]
 }
