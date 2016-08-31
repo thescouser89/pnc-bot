@@ -227,8 +227,8 @@ module.exports = (robot) ->
   crontime = () ->
     users_str = config.scrum_users.join(' ')
     message = "IT'S SCRUM TIME !!! IT'S SCRUM TIME !!! IT'S SCRUM TIME !!!".irc.rainbow.bold()
+    message += " " + config.scrum_extra_notes
     robot.messageRoom config.pnc_monitoring_channel, users_str + ": " + message
-
 
   new CronJob("0 43-44 9 * * 1-4", crontime, null, true)
   # ============================================================================
