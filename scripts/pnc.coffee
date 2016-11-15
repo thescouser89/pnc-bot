@@ -132,10 +132,24 @@ module.exports = (robot) ->
         username: config.keycloak_config.username
         password: config.keycloak_config.password
 
+
     realm = config.keycloak_config.realm
 
     Rest.post("#{keycloak_url}/auth/realms/#{realm}/protocol/openid-connect/token", request).on('success', (result) ->
+
+      # we got logged in, we need to logout now
+      request_response =
+        data:
+          client_id: config.keycloak_config.client_id
+          refresh_token: result.refresh_token
+
+      option = {'headers': {'Authorization': 'Bearer ' + result.access_token}}
+
+      Rest.post("#{keycloak_url}/auth/realms/#{realm}/protocol/openid-connect/logout",
+                request_response, option)
+
       handler keycloak_url, status_online
+
     ).on('fail', (result) ->
       handler keycloak_url, status_online_errors if retries == 0
       check_keycloak_server(keycloak_url, handler, retries - 1) if retries != 0
