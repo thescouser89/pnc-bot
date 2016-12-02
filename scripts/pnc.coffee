@@ -48,7 +48,7 @@ status_offline = "OFFLINE"
 config_file = "hubot-pnc.json"
 test_pnc_online_url = "/pnc-rest/rest/users"
 test_indy_online_url = "/api/remote/central/xom/xom/"
-test_da_online_url = "/da/rest/v-0.4"
+test_da_online_url = "/da/rest/v-1"
 
 config = ''
 
