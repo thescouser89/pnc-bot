@@ -272,12 +272,7 @@ module.exports = (robot) ->
 
 
   robot.hear /^all[:,]+(.*)/i, (res) ->
-    response = ''
-
-    # build user list
-    for own key, user of robot.brain.data.users
-      # don't include the bot nick in all
-      response += "#{user.name} " if user.room == res.envelope.room and user.name != robot.name
+    response = config.scrum_users.join(' ')
 
     response = response.trim() + ": " + res.match[1].trim() if response
 
