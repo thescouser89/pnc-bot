@@ -244,7 +244,8 @@ module.exports = (robot) ->
     robot.messageRoom config.pnc_monitoring_channel, users_str + ": " + message
     robot.messageRoom config.pnc_monitoring_channel, config.scrum_extra_notes
 
-  new CronJob("0 43-44 14 * * 1-4", crontime, null, true, 'UTC')
+  new CronJob("0 58-59 14 * * 2-4", crontime, null, true, 'Europe/Prague')
+  new CronJob("0 43-44 15 * * 1", crontime, null, true, 'Europe/Prague')
   # ============================================================================
   # *==* Update this function if you want to add a new server monitoring! *==*
   # Function invoked in the cron job
