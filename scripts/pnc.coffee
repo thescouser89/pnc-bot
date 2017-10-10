@@ -254,7 +254,6 @@ module.exports = (robot) ->
   new CronJob("0 58-59 15 * * 1", crontime, null, true, 'Europe/Prague')
 
   new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
-  new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
   # ============================================================================
   # *==* Update this function if you want to add a new server monitoring! *==*
   # Function invoked in the cron job
