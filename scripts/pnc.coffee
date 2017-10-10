@@ -244,8 +244,17 @@ module.exports = (robot) ->
     robot.messageRoom config.pnc_monitoring_channel, users_str + ": " + message
     robot.messageRoom config.pnc_monitoring_channel, config.scrum_extra_notes
 
+  crontime_kanban = () ->
+    users_str = config.prodcore_kanban_users.join(' ')
+    message = "IT'S KANBAN TIME !!! IT'S KANBAN TIME !!! IT'S KANBAN TIME !!!".irc.rainbow.bold()
+    robot.messageRoom config.prodcore_monitoring_channel, users_str + ": " + message
+    robot.messageRoom config.prodcore_monitoring_channel, config.kanban_extra_notes
+
   new CronJob("0 58-59 14 * * 2-4", crontime, null, true, 'Europe/Prague')
   new CronJob("0 58-59 15 * * 1", crontime, null, true, 'Europe/Prague')
+
+  new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
+  new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
   # ============================================================================
   # *==* Update this function if you want to add a new server monitoring! *==*
   # Function invoked in the cron job
