@@ -17,4 +17,4 @@ module.exports = (robot) ->
 
     robot.hear /^!fact ([\w]+)/i, (res) ->
         user = res.match[1].trim()
-        res.send user + " " + res.matrobot.brain.get(user)
+        res.send user + " " + robot.brain.get(user)
