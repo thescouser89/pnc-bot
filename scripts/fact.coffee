@@ -50,6 +50,8 @@ module.exports = (robot) ->
       if username isnt robot.name
           user = clean_up_username(username)
           facts = robot.brain.get(user)
-          if facts
+          # Only print fact when user enters if fact length greater than one
+          # to avoid repetitive facts
+          if facts && facts.length > 1
               random_fact = random_item_in_list(facts)
               robot.messageRoom room, user + " " + random_fact if random_fact
