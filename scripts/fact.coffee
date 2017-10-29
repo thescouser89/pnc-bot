@@ -18,6 +18,27 @@ clean_up_username = (username) ->
         else
             return username
 
+should_send_fact = (user, robot) ->
+    last_time = robot.brain.get(user + "_last")
+    robot.logger.info last_time
+    if last_time != null
+      time_now = new Date().getTime()
+
+      time_elapsed_in_milliseconds = time_now - last_time
+      time_elapsed_in_hours = time_elapsed_in_milliseconds / 3600000
+
+      if time_elapsed_in_hours > 8
+        robot.brain.set(user + "_last", time_now)
+        return true
+      else
+        return false
+    else
+      robot.logger.info "else"
+      robot.brain.set(user + "_last", new Date().getTime())
+      return true
+
+
+
 module.exports = (robot) ->
     robot.hear /^!factadd ([\w_|-]+) (.*)/i, (res) ->
         if (res.match.length != 3)
@@ -52,6 +73,6 @@ module.exports = (robot) ->
           facts = robot.brain.get(user)
           # Only print fact when user enters if fact length greater than one
           # to avoid repetitive facts
-          if facts && facts.length > 1
+          if facts && facts.length > 1 && should_send_fact(user, robot)
               random_fact = random_item_in_list(facts)
               robot.messageRoom room, user + " " + random_fact if random_fact
