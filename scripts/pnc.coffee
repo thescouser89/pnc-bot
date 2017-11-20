@@ -250,8 +250,7 @@ module.exports = (robot) ->
     robot.messageRoom config.prodcore_monitoring_channel, users_str + ": " + message
     robot.messageRoom config.prodcore_monitoring_channel, config.kanban_extra_notes
 
-  new CronJob("0 58-59 14 * * 2-4", crontime, null, true, 'Europe/Prague')
-  new CronJob("0 58-59 15 * * 1", crontime, null, true, 'Europe/Prague')
+  new CronJob("0 58-59 14 * * 1-4", crontime, null, true, 'Europe/Prague')
 
   new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
   # ============================================================================
