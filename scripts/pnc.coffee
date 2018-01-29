@@ -78,7 +78,7 @@ JSON_File.readFile(config_file, (err, obj) ->
   indy_servers = config.indy_servers
   jenkins_servers = config.jenkins_servers
   keycloak_servers = config.keycloak_servers
-  causeway-servers= config.causeway_servers
+  causeway_servers= config.causeway_servers
   cartographer_servers = config.cartographer_servers
   dependency_analysis_servers = config.dependency_analysis_servers
   repour_servers = config.repour_servers
