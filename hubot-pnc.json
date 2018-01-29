@@ -9,6 +9,8 @@
   ],
   "jenkins_servers": [
   ],
+  "causeway_servers": [],
+  "cartographer_servers": [],
   "dependency_analysis_servers": [
   ],
   "keycloak_config": {
@@ -18,7 +20,11 @@
   	"password": ""
   },
   "pnc_monitoring_channel": "",
+  "pnc_channel": "",
   "scrum_users": [
   ],
-  "scrum_extra_notes": ""
+  "scrum_extra_notes": "",
+  "prodcore_monitoring_channel": "",
+  "prodcore_kanban_users": [],
+  "pncstatus_link": ""
 }

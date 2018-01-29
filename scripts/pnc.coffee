@@ -30,6 +30,7 @@ require("irc-colors").global()
 
 # Cronjob
 CronJob = require('cron').CronJob
+
 # ==============================================================================
 # End: Import statements
 # ==============================================================================
@@ -49,6 +50,8 @@ config_file = "hubot-pnc.json"
 test_pnc_online_url = "/pnc-rest/rest/users"
 test_indy_online_url = "/api/remote/central/xom/xom/"
 test_da_online_url = "/da/rest/v-1"
+test_causeway_online_url = "/causeway/rest"
+test_carto_online_url = "/api/admin/sources/aliases"
 
 config = ''
 
@@ -99,6 +102,49 @@ module.exports = (robot) ->
       when status_online_errors then status.irc.yellow.bold.bgblack()
       when status_offline then status.irc.red.bold.bgwhite()
 
+  mode_of_array = (array) ->
+    item = ''
+    mf = 1
+    m = 0
+    for i in [0...array.length]
+      for j in [0...array.length]
+        if array[i] == array[j]
+          m++
+          if mf < m
+            mf = m
+            item = array[i]
+
+      m = 0
+
+    if not item
+      item = array[array.length - 1]
+
+    item
+
+  monitor = (server, env, status, handler) ->
+
+      array = robot.brain.get(server + ":trend")
+
+      if not array
+          array = []
+
+      # Adding data and maintaining structure part
+      if array.length == 3
+          array.shift()
+          array.push(status)
+      else
+          array.push(status)
+
+      robot.brain.set(server + ":trend", array)
+
+      mode = mode_of_array(array)
+
+      current_status = robot.brain.get(server + ":current")
+      if current_status && current_status != mode
+        handler server, env, mode
+
+      robot.brain.set(server + ":current", mode)
+
   # ============================================================================
   # Print to the channel that a server has changed status
   #
@@ -107,12 +153,18 @@ module.exports = (robot) ->
   #   new_status: :string:
   #   old_status: :string:
   # ============================================================================
-  notify_status_change = (server_url, new_status, old_status) ->
+  notify_status_change = (server_url, env, new_status) ->
 
-    opening_msg = ">>>".irc.bold.red()
-    closing_msg = "<<<".irc.bold.red()
-    message = "#{opening_msg} #{server_url} is now #{irc_colorize_status(new_status)}" +
-              " (was previously #{irc_colorize_status(old_status)}) #{closing_msg}"
+    if env == "Devel"
+      opening_msg = "[Devel]".irc.bold.green()
+
+    if env == "Stage"
+      opening_msg = "[Stage]".irc.bold.blue()
+
+    if env == "Prod"
+      opening_msg = "[Prod]".irc.bold.red()
+
+    message = "#{opening_msg} #{server_url} is now #{irc_colorize_status(new_status)}"
 
     robot.messageRoom config.pnc_monitoring_channel, message
 
@@ -123,7 +175,7 @@ module.exports = (robot) ->
   #   keycloak url: :string:
   #   handler: function accepting 2 parameters, first one is server url, second one is status
   # ============================================================================
-  check_keycloak_server = (keycloak_url, handler, retries = 2) ->
+  check_keycloak_server = (keycloak_url, env, handler) ->
 
     request =
       data:
@@ -148,14 +200,12 @@ module.exports = (robot) ->
       Rest.post("#{keycloak_url}/auth/realms/#{realm}/protocol/openid-connect/logout",
                 request_response, option)
 
-      handler keycloak_url, status_online
+      monitor(keycloak_url, env, status_online, handler)
 
     ).on('fail', (result) ->
-      handler keycloak_url, status_online_errors if retries == 0
-      check_keycloak_server(keycloak_url, handler, retries - 1) if retries != 0
+      monitor(keycloak_url, env, status_online_errors, handler)
     ).on('error', (result) ->
-      handler keycloak_url, status_offline if retries == 0
-      check_keycloak_server(keycloak_url, handler, retries - 1) if retries != 0
+      monitor(keycloak_url, env, status_offline, handler)
     )
 
   # ============================================================================
@@ -165,15 +215,16 @@ module.exports = (robot) ->
   #   repour url: :string:
   #   handler: function accepting 2 parameters, first one is server url, second one is status
   # ============================================================================
-  check_repour_server = (repour_url, handler, retries = 2) ->
-    Rest.get(repour_url).on('404', (result) ->
-      handler repour_url, status_online
+  check_repour_server = (repour_url, env, handler, retries = 2) ->
+    Rest.get(repour_url).on('403', (result) ->
+      robot.logger.info "#{repour_url} is online"
+      monitor(repour_url, env, status_online, handler)
     ).on('503', (result) ->
-      handler repour_url, status_online_errors if retries == 0
-      check_repour_server(repour_url, handler, retries - 1) if retries != 0
+      robot.logger.info "#{repour_url} is having issues"
+      monitor(repour_url, env, status_online_errors, handler)
     ).on('error', (result) ->
-      handler repour_url, status_offline if retries == 0
-      check_repour_server(repour_url, handler, retries - 1) if retries != 0
+      robot.logger.info "#{repour_url} is offline"
+      monitor(repour_url, env, status_offline, handler)
     )
 
   # ============================================================================
@@ -186,16 +237,14 @@ module.exports = (robot) ->
   #   server url: :string:
   #   handler: :function: function accepting 2 parameters, first one is server url, second one is status
   # ============================================================================
-  check_status_server = (server_url, server_url_test, handler, retries = 2) ->
+  check_status_server = (server_url, env, server_url_test, handler) ->
 
     Rest.get(server_url_test).on('success', (result) ->
-      handler server_url, status_online
+      monitor(server_url, env, status_online, handler)
     ).on('fail', (result) ->
-      handler server_url, status_online_errors if retries == 0
-      check_status_server(server_url, server_url_test, handler, retries - 1) if retries != 0
+      monitor(server_url, env, status_online_errors, handler)
     ).on('error', (result) ->
-      handler server_url, status_offline if retries == 0
-      check_status_server(server_url, server_url_test, handler, retries - 1) if retries != 0
+      monitor(server_url, env, status_offline, handler)
     )
 
   # ============================================================================
@@ -208,16 +257,9 @@ module.exports = (robot) ->
   #   server_url: :string:
   #   status    : :string: current status of the server
   # ============================================================================
-  update_status = (server_url, status) ->
-    if server_status[server_url]
-      if server_status[server_url] != status
-        robot.logger.info "#{server_url} is #{status}"
-        notify_status_change server_url, status, server_status[server_url]
-        server_status[server_url] = status
-    else
-      # first time the server is encountered, don't notify
-      robot.logger.info "#{server_url} is #{status}"
-      server_status[server_url] = status
+  update_status = (server_url, env, status) ->
+    robot.logger.info "#{server_url} is #{status}"
+    notify_status_change server_url, env, status
 
   # ============================================================================
   # Function generating a handler for the check_* functions
@@ -241,8 +283,8 @@ module.exports = (robot) ->
   crontime = () ->
     users_str = config.scrum_users.join(' ')
     message = "IT'S SCRUM TIME !!! IT'S SCRUM TIME !!! IT'S SCRUM TIME !!!".irc.rainbow.bold()
-    robot.messageRoom config.pnc_monitoring_channel, users_str + ": " + message
-    robot.messageRoom config.pnc_monitoring_channel, config.scrum_extra_notes
+    robot.messageRoom config.pnc_channel, users_str + ": " + message
+    robot.messageRoom config.pnc_channel, config.scrum_extra_notes
 
   crontime_kanban = () ->
     users_str = config.prodcore_kanban_users.join(' ')
@@ -258,25 +300,22 @@ module.exports = (robot) ->
   # Function invoked in the cron job
   # ============================================================================
   cron_check_status = () ->
-    check_status_server(server, server + test_pnc_online_url, update_status) for server in pnc_servers
-    check_status_server(server, server + test_indy_online_url, update_status) for server in indy_servers
-    check_status_server(server, server + test_da_online_url, update_status) for server in dependency_analysis_servers
-    check_status_server(server, server, update_status) for server in jenkins_servers
-    check_keycloak_server(server, update_status) for server in keycloak_servers
-    check_repour_server(server, update_status) for server in repour_servers
+    check_status_server(server["url"], server["env"], server["url"] + test_pnc_online_url, update_status) for server in pnc_servers
+    check_status_server(server["url"], server["env"], server["url"] + test_indy_online_url, update_status) for server in indy_servers
+    check_status_server(server["url"], server["env"], server["url"] + test_da_online_url, update_status) for server in dependency_analysis_servers
+    check_status_server(server["url"], server["env"], server["url"], update_status) for server in jenkins_servers
+    check_status_server(server["url"], server["env"], server["url"] + test_causeway_online_url, update_status) for server in causeway_servers
+    check_status_server(server["url"], server["env"], server["url"] + test_carto_online_url, update_status) for server in cartographer_servers
+    check_keycloak_server(server["url"], server["env"], update_status) for server in keycloak_servers
+    check_repour_server(server["url"], server["env"], update_status) for server in repour_servers
 
-  new CronJob("0 */5 * * * *", cron_check_status, null, true)
+  new CronJob("0 */3 * * * *", cron_check_status, null, true)
 
   # ============================================================================
   # pnc status command
   # ============================================================================
   robot.respond /(.*)pnc(.*)status(.*)/i, (res) ->
-    check_status_server(server, server + test_pnc_online_url, reply_now("PNC", res)) for server in pnc_servers
-    check_status_server(server, server + test_indy_online_url, reply_now("Indy", res)) for server in indy_servers
-    check_status_server(server, server + test_da_online_url, reply_now("DA", res)) for server in dependency_analysis_servers
-    check_status_server(server, server, reply_now("Jenkins", res)) for server in jenkins_servers
-    check_keycloak_server(server, reply_now("Keycloak", res)) for server in keycloak_servers
-    check_repour_server(server, reply_now("Repour", res)) for server in repour_servers
+    res.send "Click the link to find the status: " + config.pncstatus_link
 
 
   robot.hear /^all[:,]+(.*)/i, (res) ->
