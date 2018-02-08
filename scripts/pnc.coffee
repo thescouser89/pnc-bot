@@ -229,6 +229,9 @@ module.exports = (robot) ->
     ).on('error', (result) ->
       robot.logger.info "#{repour_url} is offline"
       monitor(repour_url, env, status_offline, handler)
+    ).on('success', (result) ->
+      robot.logger.info "#{repour_url} is online"
+      monitor(repour_url, env, status_online, handler)
     )
 
   # ============================================================================
