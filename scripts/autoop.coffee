@@ -16,6 +16,7 @@ JSON_File.readFile(config_file, (err, obj) ->
 )
 
 op_user = (robot, user, room) ->
+    robot.logger.info("Giving ops to: " + user)
     robot.adapter.command('MODE', room, '+o', user)
 
 module.exports = (robot) ->
