@@ -55,10 +55,6 @@ test_carto_online_url = "/api/admin/sources/aliases"
 
 config = ''
 
-username = ''
-password = ''
-registered = false
-
 pnc_servers = []
 indy_servers = []
 jenkins_servers = []
@@ -87,8 +83,6 @@ JSON_File.readFile(config_file, (err, obj) ->
   dependency_analysis_servers = config.dependency_analysis_servers
   repour_servers = config.repour_servers
   scrum_users = config.scrum_users
-  username = config.username
-  password = config.password
 )
 
 # ==============================================================================
@@ -102,12 +96,6 @@ module.exports = (robot) ->
   #   "server_name2": "offline"
   # }
   server_status = {}
-
-  register = () ->
-    robot.logger.info "Registering bot..."
-    robot.send {user: {name: 'UserServ'}}, "LOGIN " + username + ' ' + password
-    robot.logger.info "Registering bot message sent..."
-
 
   # ============================================================================
   # Colorize the string based on the status
@@ -296,24 +284,6 @@ module.exports = (robot) ->
         status_colorized = irc_colorize_status(status)
         res.send "#{server_type.irc.grey()} :: #{server_url} : #{status_colorized}"
 
-  # ============================================================================
-  # Simple cronjob to remind people it's scrum-time!
-  # ============================================================================
-  crontime = () ->
-    users_str = config.scrum_users.join(' ')
-    message = "IT'S SCRUM TIME !!! IT'S SCRUM TIME !!! IT'S SCRUM TIME !!!".irc.rainbow.bold()
-    robot.messageRoom config.pnc_channel, users_str + ": " + message
-    robot.messageRoom config.pnc_channel, config.scrum_extra_notes
-
-  crontime_kanban = () ->
-    users_str = config.prodcore_kanban_users.join(' ')
-    message = "IT'S KANBAN TIME !!! IT'S KANBAN TIME !!! IT'S KANBAN TIME !!!".irc.rainbow.bold()
-    robot.messageRoom config.prodcore_monitoring_channel, users_str + ": " + message
-    robot.messageRoom config.prodcore_monitoring_channel, config.kanban_extra_notes
-
-  new CronJob("0 58-59 14 * * 1-4", crontime, null, true, 'Europe/Prague')
-
-  new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
 
   # ============================================================================
   # *==* Update this function if you want to add a new server monitoring! *==*
@@ -344,11 +314,3 @@ module.exports = (robot) ->
     response = response.trim() + ": " + res.match[1].trim() if response
 
     res.send response if response
-
-  robot.enter (msg) ->
-    username = msg.message.user.name
-    room = msg.message.user.room
-    if username == robot.name
-      if registered isnt true
-        register()
-        registered = true

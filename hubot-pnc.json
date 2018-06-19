@@ -25,8 +25,10 @@
   ],
   "op_channels": [],
   "scrum_extra_notes": "",
+  "planning_extra_notes": "",
   "prodcore_monitoring_channel": "",
   "prodcore_kanban_users": [],
+  "kanban_extra_notes": "",
   "pncstatus_link": "",
   "username": "",
   "password": ""
