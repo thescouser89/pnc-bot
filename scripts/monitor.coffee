@@ -20,7 +20,3 @@ monitor = (robot, server, status, update_status) ->
     if array.length == 3
         if array[1] == array[2] && array[1] != array[0]
             update_status server, status
-
-haha = (robot) ->
-
-    robot.messageRoom "#dcheung-test", "hi dustin"
