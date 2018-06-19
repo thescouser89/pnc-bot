@@ -27,5 +27,7 @@
   "scrum_extra_notes": "",
   "prodcore_monitoring_channel": "",
   "prodcore_kanban_users": [],
-  "pncstatus_link": ""
+  "pncstatus_link": "",
+  "username": "",
+  "password": ""
 }

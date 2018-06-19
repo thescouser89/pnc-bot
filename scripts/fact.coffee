@@ -76,3 +76,4 @@ module.exports = (robot) ->
           if facts && facts.length > 1 && should_send_fact(user, robot)
               random_fact = random_item_in_list(facts)
               robot.messageRoom room, user + " " + random_fact if random_fact
+

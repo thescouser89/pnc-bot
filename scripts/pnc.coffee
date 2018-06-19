@@ -55,6 +55,10 @@ test_carto_online_url = "/api/admin/sources/aliases"
 
 config = ''
 
+username = ''
+password = ''
+registered = false
+
 pnc_servers = []
 indy_servers = []
 jenkins_servers = []
@@ -83,6 +87,8 @@ JSON_File.readFile(config_file, (err, obj) ->
   dependency_analysis_servers = config.dependency_analysis_servers
   repour_servers = config.repour_servers
   scrum_users = config.scrum_users
+  username = config.username
+  password = config.password
 )
 
 # ==============================================================================
@@ -96,6 +102,12 @@ module.exports = (robot) ->
   #   "server_name2": "offline"
   # }
   server_status = {}
+
+  register = () ->
+    robot.logger.info "Registering bot..."
+    robot.send {user: {name: 'UserServ'}}, "LOGIN " + username + ' ' + password
+    robot.logger.info "Registering bot message sent..."
+
 
   # ============================================================================
   # Colorize the string based on the status
@@ -302,6 +314,7 @@ module.exports = (robot) ->
   new CronJob("0 58-59 14 * * 1-4", crontime, null, true, 'Europe/Prague')
 
   new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
+
   # ============================================================================
   # *==* Update this function if you want to add a new server monitoring! *==*
   # Function invoked in the cron job
@@ -331,3 +344,11 @@ module.exports = (robot) ->
     response = response.trim() + ": " + res.match[1].trim() if response
 
     res.send response if response
+
+  robot.enter (msg) ->
+    username = msg.message.user.name
+    room = msg.message.user.room
+    if username == robot.name
+      if registered isnt true
+        register()
+        registered = true
