@@ -221,16 +221,12 @@ module.exports = (robot) ->
   # ============================================================================
   check_repour_server = (repour_url, env, handler, retries = 2) ->
     Rest.get(repour_url).on('403', (result) ->
-      robot.logger.info "#{repour_url} is online"
       monitor(repour_url, env, status_online, handler)
     ).on('503', (result) ->
-      robot.logger.info "#{repour_url} is having issues"
       monitor(repour_url, env, status_online_errors, handler)
     ).on('error', (result) ->
-      robot.logger.info "#{repour_url} is offline"
       monitor(repour_url, env, status_offline, handler)
     ).on('success', (result) ->
-      robot.logger.info "#{repour_url} is online"
       monitor(repour_url, env, status_online, handler)
     )
 
@@ -265,7 +261,6 @@ module.exports = (robot) ->
   #   status    : :string: current status of the server
   # ============================================================================
   update_status = (server_url, env, status) ->
-    robot.logger.info "#{server_url} is #{status}"
     notify_status_change server_url, env, status
 
   # ============================================================================
