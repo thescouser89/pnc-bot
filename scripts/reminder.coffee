@@ -42,6 +42,7 @@ module.exports = (robot) ->
     users_str = config.prodcore_kanban_users.join(' ')
     message = "IT'S PRODCALL TIME !!!".irc.rainbow.bold()
     robot.messageRoom config.prodcore_monitoring_channel, users_str + ": " + message
+    robot.messageRoom config.prodcore_monitoring_channel, config.prodcall_extra_notes
 
   new CronJob("0 58-59 14 * * 1", crontime_planning, null, true, 'Europe/Prague')
   new CronJob("0 58-59 14 * * 2-4", crontime_scrum, null, true, 'Europe/Prague')
