@@ -55,6 +55,21 @@ module.exports = (robot) ->
             robot.brain.set(user, existing_facts)
             res.send user + " " + fact
 
+    robot.hear /^!quoteadd ([\w_|-]+) (.*)/i, (res) ->
+        if (res.match.length != 3)
+            res.send "Error! Format is: !quoteadd <user> <quote>"
+        else
+            user = clean_up_username(res.match[1].trim())
+            quote = res.match[2].trim()
+            existing_quotes = robot.brain.get(user + "_quotes")
+
+            if not existing_quotes
+                existing_quotes = []
+
+            existing_quotes.push quote
+            robot.brain.set(user + "_quotes", existing_quotes)
+            res.send user + " once said, \"" + quote + "\""
+
     robot.hear /^!fact ([\w]+)/i, (res) ->
         user = clean_up_username(res.match[1].trim())
         facts = robot.brain.get(user)
@@ -64,16 +79,38 @@ module.exports = (robot) ->
         else
             res.send "No facts for user: " + user
 
+    robot.hear /^!quote ([\w]+)/i, (res) ->
+        user = clean_up_username(res.match[1].trim())
+        quotes = robot.brain.get(user + "_quotes")
+        if quotes
+            random_quote = random_item_in_list(quotes)
+            res.send user + " once said, \"" + random_quote + "\"" if random_quote
+        else
+            res.send "No quotes for user: " + user
+
 
     robot.enter (msg) ->
       username = msg.message.user.name
       room = msg.message.user.room
+
       if username isnt robot.name
           user = clean_up_username(username)
-          facts = robot.brain.get(user)
-          # Only print fact when user enters if fact length greater than one
-          # to avoid repetitive facts
-          if facts && facts.length > 1 && should_send_fact(user, robot)
-              random_fact = random_item_in_list(facts)
-              robot.messageRoom room, user + " " + random_fact if random_fact
+
+        #   if should_send_fact(user, robot)
+        quote_or_list = []
+        facts = robot.brain.get(user)
+        quotes = robot.brain.get(user + "_quotes")
+        
+        if quotes && quotes.length > 1
+            random_quote = random_item_in_list(quotes)
+            quote_or_list.push user + " once said, \"" + random_quote + "\"" if random_quote
+
+        # Only print fact when user enters if fact length greater than one
+        # to avoid repetitive facts
+        if facts && facts.length > 1
+            random_fact = random_item_in_list(facts)
+            quote_or_list.push user + " " + random_fact if random_fact
+
+        if quote_or_list.length > 0
+            robot.messageRoom room, random_item_in_list(quote_or_list)
 
