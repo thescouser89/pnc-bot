@@ -96,11 +96,11 @@ module.exports = (robot) ->
       if username isnt robot.name
           user = clean_up_username(username)
 
-        #   if should_send_fact(user, robot)
+      if should_send_fact(user, robot)
         quote_or_list = []
         facts = robot.brain.get(user)
         quotes = robot.brain.get(user + "_quotes")
-        
+
         if quotes && quotes.length > 1
             random_quote = random_item_in_list(quotes)
             quote_or_list.push user + " once said, \"" + random_quote + "\"" if random_quote
