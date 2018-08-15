@@ -47,5 +47,5 @@ module.exports = (robot) ->
   new CronJob("0 58-59 14 * * 1", crontime_planning, null, true, 'Europe/Prague')
   new CronJob("0 58-59 14 * * 2-4", crontime_scrum, null, true, 'Europe/Prague')
 
-  new CronJob("0 28-29 15 * * 2-4", crontime_kanban, null, true, 'Europe/Prague')
+  new CronJob("0 28-29 15 * * 2,4", crontime_kanban, null, true, 'Europe/Prague')
   new CronJob("0 58 14 * * 5", crontime_prodtime, null, true, 'Europe/Prague')
